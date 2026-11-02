@@ -1,9 +1,4 @@
--- ============================================================
--- 01_views.sql
--- Run once in pgAdmin Query Tool (F5 or Execute)
--- Creates: vw_borrowing_details, vw_equipment_usage
--- Safe to re-run (uses CREATE OR REPLACE)
--- ============================================================
+
 
 CREATE OR REPLACE VIEW vw_borrowing_details AS
 SELECT

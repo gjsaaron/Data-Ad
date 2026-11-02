@@ -6,7 +6,6 @@ $minQty  = max(1, (int)($_GET['min_qty']  ?? 1));
 $minGrp  = max(1, (int)($_GET['min_grp']  ?? 1));
 $status  = in_array($_GET['sw'] ?? '', ['Borrowed','Returned','Overdue','Cancelled','']) ? ($_GET['sw'] ?? '') : '';
 
-// HAVING: borrowers with >= N transactions
 $stmtA = $pdo->prepare("
     SELECT b.borrower_no, b.full_name, b.borrower_type,
            COUNT(bt.borrow_id) AS txn_count,
@@ -21,7 +20,6 @@ $stmtA = $pdo->prepare("
 $stmtA->execute([':n' => $minTxn]);
 $havingBorrowers = $stmtA->fetchAll();
 
-// HAVING: equipment with >= N total qty borrowed
 $stmtB = $pdo->prepare("
     SELECT e.property_no, e.equipment_name,
            COUNT(DISTINCT bt.borrow_id) AS borrow_count,
@@ -36,7 +34,6 @@ $stmtB = $pdo->prepare("
 $stmtB->execute([':n' => $minQty]);
 $havingEquipment = $stmtB->fetchAll();
 
-// WHERE (pre-filter by status)
 $whereClause = $status ? 'WHERE bt.status = :s' : '';
 $stmtW = $pdo->prepare("
     SELECT b.borrower_type, COUNT(DISTINCT bt.borrow_id) AS cnt
@@ -48,7 +45,6 @@ $stmtW = $pdo->prepare("
 $stmtW->execute($status ? [':s' => $status] : []);
 $whereResult = $stmtW->fetchAll();
 
-// HAVING (post-filter by group count)
 $stmtH = $pdo->prepare("
     SELECT b.borrower_type, COUNT(DISTINCT bt.borrow_id) AS cnt
     FROM borrowers b
@@ -65,7 +61,6 @@ $currentPage = 'grouped';
 require_once '../includes/header.php';
 ?>
 
-<!-- Controls -->
 <form method="get" class="filter-row" style="margin-bottom:20px">
     <div class="form-group">
         <label>Min Transactions (HAVING)</label>
@@ -91,7 +86,6 @@ require_once '../includes/header.php';
     <div class="form-group"><label>&nbsp;</label><button type="submit" class="btn">Apply</button></div>
 </form>
 
-<!-- A: HAVING on borrowers -->
 <p class="text-muted" style="margin-bottom:6px">Borrowers with ≥ <?= $minTxn ?> transactions (HAVING)</p>
 <div class="card" style="margin-bottom:16px">
     <div class="table-wrap">
@@ -114,7 +108,6 @@ require_once '../includes/header.php';
     </div>
 </div>
 
-<!-- B: HAVING on equipment -->
 <p class="text-muted" style="margin-bottom:6px">Equipment with ≥ <?= $minQty ?> total qty borrowed (HAVING)</p>
 <div class="card" style="margin-bottom:20px">
     <div class="table-wrap">
@@ -136,7 +129,6 @@ require_once '../includes/header.php';
     </div>
 </div>
 
-<!-- C: WHERE vs HAVING side by side -->
 <div class="grid-2">
     <div>
         <p class="text-muted" style="margin-bottom:6px">

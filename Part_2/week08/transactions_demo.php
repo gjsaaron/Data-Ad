@@ -5,11 +5,9 @@ $result  = null;
 $action  = $_POST['action'] ?? '';
 
 if ($action === 'success') {
-    // ── SUCCESSFUL TRANSACTION: BEGIN → INSERT transaction + item → COMMIT ────
     try {
         $pdo->beginTransaction();
 
-        // Pick any borrower and an equipment with stock available
         $borrower = $pdo->query("SELECT borrower_id FROM borrowers LIMIT 1")->fetchColumn();
         $equip    = $pdo->query("
             SELECT e.equipment_id
@@ -25,7 +23,6 @@ if ($action === 'success') {
 
         if (!$borrower || !$equip) throw new RuntimeException('No available equipment found for test.');
 
-        // Insert a new transaction
         $stmt = $pdo->prepare("
             INSERT INTO borrow_transactions (borrower_id, borrow_date, due_date, status)
             VALUES (?, CURRENT_DATE, CURRENT_DATE + 3, 'Borrowed')
@@ -34,13 +31,12 @@ if ($action === 'success') {
         $stmt->execute([$borrower]);
         $borrowId = $stmt->fetchColumn();
 
-        // Insert a borrow item (qty = 1, always valid)
         $pdo->prepare("
             INSERT INTO borrow_items (borrow_id, equipment_id, quantity)
             VALUES (?, ?, 1)
         ")->execute([$borrowId, $equip]);
 
-        $pdo->commit();  // ← COMMIT: saves everything
+        $pdo->commit();  
 
         $result = ['type' => 'success', 'msg' => "Transaction committed. New borrow_id = $borrowId, equipment_id = $equip, qty = 1."];
 
@@ -50,14 +46,12 @@ if ($action === 'success') {
     }
 
 } elseif ($action === 'rollback') {
-    // ── FAILED TRANSACTION: BEGIN → INSERT transaction → invalid item → ROLLBACK
     try {
         $pdo->beginTransaction();
 
         $borrower = $pdo->query("SELECT borrower_id FROM borrowers LIMIT 1")->fetchColumn();
         $equip    = $pdo->query("SELECT equipment_id FROM equipment LIMIT 1")->fetchColumn();
 
-        // Insert the transaction header (this succeeds)
         $stmt = $pdo->prepare("
             INSERT INTO borrow_transactions (borrower_id, borrow_date, due_date, status)
             VALUES (?, CURRENT_DATE, CURRENT_DATE + 3, 'Borrowed')
@@ -66,7 +60,6 @@ if ($action === 'success') {
         $stmt->execute([$borrower]);
         $borrowId = $stmt->fetchColumn();
 
-        // Try to borrow 9999 units — will fail the CHECK constraint or trigger
         $pdo->prepare("
             INSERT INTO borrow_items (borrow_id, equipment_id, quantity)
             VALUES (?, ?, 9999)
@@ -76,12 +69,11 @@ if ($action === 'success') {
         $result = ['type' => 'success', 'msg' => 'Committed (unexpected).'];
 
     } catch (Throwable $e) {
-        $pdo->rollBack();  // ← ROLLBACK: undoes BOTH the transaction header AND the item attempt
+        $pdo->rollBack();  
         $result = ['type' => 'rollback', 'msg' => 'Rolled back successfully. Error: ' . $e->getMessage()];
     }
 }
 
-// Current transaction counts for context
 $txnCount  = (int) $pdo->query("SELECT COUNT(*) FROM borrow_transactions")->fetchColumn();
 $itemCount = (int) $pdo->query("SELECT COUNT(*) FROM borrow_items")->fetchColumn();
 
@@ -100,7 +92,6 @@ require_once '../includes/header.php';
 <p class="result-count">Current row counts — borrow_transactions: <strong><?= $txnCount ?></strong> · borrow_items: <strong><?= $itemCount ?></strong></p>
 
 <div class="grid-2" style="margin-top:8px">
-    <!-- Test 1: Successful COMMIT -->
     <div class="card">
         <div class="card-body">
             <p style="font-size:13px;font-weight:600;margin-bottom:6px">Test 1 — Successful Transaction (COMMIT)</p>
@@ -115,7 +106,6 @@ require_once '../includes/header.php';
         </div>
     </div>
 
-    <!-- Test 2: ROLLBACK -->
     <div class="card">
         <div class="card-body">
             <p style="font-size:13px;font-weight:600;margin-bottom:6px">Test 2 — Failed Transaction (ROLLBACK)</p>
@@ -131,7 +121,6 @@ require_once '../includes/header.php';
     </div>
 </div>
 
-<!-- Row count after action -->
 <?php if ($result): ?>
 <p class="result-count" style="margin-top:16px">
     After action — borrow_transactions:

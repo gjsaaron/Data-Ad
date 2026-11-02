@@ -1,8 +1,4 @@
--- ============================================================
--- 02_functions.sql
--- Run AFTER 01_views.sql
--- Creates: fn_total_borrowed, fn_check_equipment_availability
--- ============================================================
+
 
 -- A. SQL Function: total units currently borrowed for one equipment
 CREATE OR REPLACE FUNCTION fn_total_borrowed(p_equipment_id INTEGER)

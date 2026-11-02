@@ -23,7 +23,6 @@ $action = $_POST['action'] ?? '';
 if ($t1ok && $t2ok && $auditOk) {
 
     if ($action === 'test_valid_insert') {
-        // INSERT 1 unit of available equipment → trigger validates → audit records it
         try {
             $borrower = $pdo->query("SELECT borrower_id FROM borrowers LIMIT 1")->fetchColumn();
             $equip    = $pdo->query("
@@ -46,7 +45,6 @@ if ($t1ok && $t2ok && $auditOk) {
     }
 
     elseif ($action === 'test_invalid_insert') {
-        // INSERT 9999 units → BEFORE trigger fires and rejects
         try {
             $borrower = $pdo->query("SELECT borrower_id FROM borrowers LIMIT 1")->fetchColumn();
             $equip    = $pdo->query("SELECT equipment_id FROM equipment LIMIT 1")->fetchColumn();
@@ -61,7 +59,6 @@ if ($t1ok && $t2ok && $auditOk) {
     }
 
     elseif ($action === 'test_update') {
-        // UPDATE an existing borrow_item quantity (decrease by 0 — just fires trigger)
         try {
             $item = $pdo->query("SELECT borrow_item_id, quantity FROM borrow_items ORDER BY borrow_item_id LIMIT 1")->fetch();
             if (!$item) throw new RuntimeException('No borrow_items found.');
@@ -72,7 +69,6 @@ if ($t1ok && $t2ok && $auditOk) {
     }
 
     elseif ($action === 'test_delete') {
-        // DELETE the last inserted borrow_item → AFTER audit trigger records DELETE
         try {
             $item = $pdo->query("SELECT borrow_item_id FROM borrow_items ORDER BY borrow_item_id DESC LIMIT 1")->fetchColumn();
             if (!$item) throw new RuntimeException('No borrow_items to delete.');
@@ -82,7 +78,6 @@ if ($t1ok && $t2ok && $auditOk) {
     }
 }
 
-// Recent audit log entries
 $auditRows = $auditOk ? $pdo->query("
     SELECT a.audit_id, a.borrow_item_id, a.borrow_id, e.equipment_name,
            a.old_quantity, a.new_quantity, a.operation,

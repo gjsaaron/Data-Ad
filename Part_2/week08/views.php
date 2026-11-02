@@ -1,7 +1,6 @@
 <?php
 require_once '../db.php';
 
-// Check if views exist
 function viewExists(PDO $pdo, string $view): bool {
     $r = $pdo->prepare("SELECT 1 FROM pg_views WHERE viewname = ?");
     $r->execute([$view]);
@@ -27,7 +26,6 @@ require_once '../includes/header.php';
 <?php endif; ?>
 
 <?php if ($v1ok): ?>
-<!-- View 1: vw_borrowing_details -->
 <p class="result-count">
     View: <strong>vw_borrowing_details</strong> — INNER JOIN across 4 tables · CASE · days_overdue
     (<?= count($details) ?> rows)
@@ -67,7 +65,6 @@ require_once '../includes/header.php';
 <?php endif; ?>
 
 <?php if ($v2ok): ?>
-<!-- View 2: vw_equipment_usage -->
 <p class="result-count">
     View: <strong>vw_equipment_usage</strong> — LEFT JOIN · COUNT · SUM · AVG · ROUND · ABS · CASE
     (<?= count($usage) ?> rows)

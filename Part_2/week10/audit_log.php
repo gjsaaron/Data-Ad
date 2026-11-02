@@ -1,7 +1,6 @@
 <?php
 require_once '../db.php';
 
-// Check audit table exists
 $s = $pdo->prepare("SELECT 1 FROM information_schema.tables WHERE table_name = 'borrow_items_audit'");
 $s->execute();
 $exists = (bool)$s->fetchColumn();

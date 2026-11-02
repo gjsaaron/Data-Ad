@@ -1,7 +1,6 @@
 <?php
 require_once '../db.php';
 
-// Set A: borrowers with active loans (Borrowed or Overdue)
 $setA = $pdo->query("
     SELECT DISTINCT b.borrower_no, b.full_name, b.borrower_type
     FROM borrowers b
@@ -9,7 +8,6 @@ $setA = $pdo->query("
     WHERE bt.status IN ('Borrowed','Overdue')
 ")->fetchAll();
 
-// Set B: borrowers who have returned items
 $setB = $pdo->query("
     SELECT DISTINCT b.borrower_no, b.full_name, b.borrower_type
     FROM borrowers b
@@ -17,7 +15,6 @@ $setB = $pdo->query("
     WHERE bt.status = 'Returned'
 ")->fetchAll();
 
-// UNION: unique borrowers from both sets (no duplicates)
 $union = $pdo->query("
     SELECT b.borrower_no, b.full_name, b.borrower_type
     FROM borrowers b
@@ -34,7 +31,6 @@ $union = $pdo->query("
     ORDER BY full_name
 ")->fetchAll();
 
-// UNION ALL: all rows including duplicates
 $unionAll = $pdo->query("
     SELECT b.borrower_no, b.full_name, b.borrower_type
     FROM borrowers b

@@ -17,7 +17,6 @@ $rows = $pdo->query("
     ORDER BY total_qty DESC
 ")->fetchAll();
 
-// Totals
 $totals = $pdo->query("
     SELECT
         COUNT(DISTINCT bt.borrow_id)  AS total_txn,

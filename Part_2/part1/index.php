@@ -9,7 +9,6 @@ function back(string $tab): void {
     header('Location: ?tab=' . urlencode($tab)); exit;
 }
 
-// ── Server-side validation helpers ───────────────────────────────────────────
 function requireText(string $key, string $label, int $min = 1, int $max = 255): string {
     $v = trim($_POST[$key] ?? '');
     if ($v === '') throw new InvalidArgumentException("\"$label\" is required.");
@@ -50,8 +49,6 @@ function requireEnum(string $key, string $label, array $allowed): string {
 
 try {
     $action = $_POST['action'] ?? '';
-
-    // ══ BORROWERS ════════════════════════════════════════════════════════════
     if ($action === 'add_borrower') {
         $no   = requireDigits('borrower_no',  'Borrower No.', 1, 20);
         $name = requireText  ('full_name',    'Full Name',    3, 120);
@@ -74,7 +71,6 @@ try {
         back('borrowers');
     }
 
-    // ══ EQUIPMENT ════════════════════════════════════════════════════════════
     if ($action === 'add_equipment') {
         $pno  = requireDigits('property_no',       'Property No.',   1, 30);
         $name = requireText  ('equipment_name',    'Equipment Name', 3, 120);
@@ -97,7 +93,6 @@ try {
         back('equipment');
     }
 
-    // ══ TRANSACTIONS ═════════════════════════════════════════════════════════
     if ($action === 'add_transaction') {
         $bid    = requireInt ('borrower_id',  'Borrower',    1);
         $bdate  = requireDate('borrow_date',  'Borrow Date');
@@ -124,7 +119,6 @@ try {
         back('transactions');
     }
 
-    // ══ BORROW ITEMS ═════════════════════════════════════════════════════════
     if ($action === 'add_item') {
         $bid  = requireInt('borrow_id',    'Transaction', 1);
         $eid  = requireInt('equipment_id', 'Equipment',   1);
@@ -147,7 +141,6 @@ try {
 
 } catch (Throwable $e) {
     $raw = $e->getMessage();
-    // Strip SQLSTATE prefix for DB errors; keep custom messages as-is
     $toastMsg  = preg_replace('/^SQLSTATE\[\w+\]:\s[^:]+:\s\d+\s+ERROR:\s/i', '', $raw);
     $toastMsg  = $toastMsg ?: $raw;
     $toastType = 'error';
@@ -169,7 +162,6 @@ $items = $pdo->query('
     ORDER BY i.borrow_item_id DESC
 ')->fetchAll();
 
-// ── Edit row fetch ────────────────────────────────────────────────────────────
 $editBorrower = $editEquipment = $editTransaction = $editItem = null;
 if (isset($_GET['edit'])) {
     $editId = (int)$_GET['edit'];
@@ -183,7 +175,6 @@ $pageTitle   = 'CRUD — Campus Equipment Borrowing';
 $currentPage = 'part1';
 require_once '../includes/header.php';
 
-// ── Tab nav ───────────────────────────────────────────────────────────────────
 $tabs = ['borrowers'=>'Borrowers','equipment'=>'Equipment','transactions'=>'Transactions','items'=>'Borrow Items'];
 echo '<div style="display:flex;gap:4px;border-bottom:1px solid #e5e7eb;margin-bottom:20px">';
 foreach ($tabs as $key => $label) {
@@ -197,8 +188,7 @@ echo '</div>';
 <script>document.addEventListener('DOMContentLoaded',function(){ showToast(<?= json_encode($toastMsg) ?>, <?= json_encode($toastType) ?>); });</script>
 <?php endif; ?>
 
-<?php /* ════════════════════════════════════════════ BORROWERS ═══════════════ */
-if ($tab === 'borrowers'): ?>
+<?php if ($tab === 'borrowers'): ?>
 
 <div class="card" style="margin-bottom:16px"><div class="card-body">
     <p style="font-size:12px;font-weight:600;color:#6b7280;margin-bottom:10px"><?= $editBorrower ? 'EDIT BORROWER' : 'ADD BORROWER' ?></p>
@@ -259,8 +249,7 @@ if ($tab === 'borrowers'): ?>
     </tbody>
 </table></div></div>
 
-<?php /* ════════════════════════════════════════════ EQUIPMENT ════════════════ */
-elseif ($tab === 'equipment'): ?>
+<?php elseif ($tab === 'equipment'): ?>
 
 <div class="card" style="margin-bottom:16px"><div class="card-body">
     <p style="font-size:12px;font-weight:600;color:#6b7280;margin-bottom:10px"><?= $editEquipment ? 'EDIT EQUIPMENT' : 'ADD EQUIPMENT' ?></p>
@@ -320,8 +309,7 @@ elseif ($tab === 'equipment'): ?>
     </tbody>
 </table></div></div>
 
-<?php /* ═══════════════════════════════════════════ TRANSACTIONS ═════════════ */
-elseif ($tab === 'transactions'): ?>
+<?php elseif ($tab === 'transactions'): ?>
 
 <div class="card" style="margin-bottom:16px"><div class="card-body">
     <p style="font-size:12px;font-weight:600;color:#6b7280;margin-bottom:10px"><?= $editTransaction ? 'EDIT TRANSACTION' : 'ADD TRANSACTION' ?></p>
@@ -366,7 +354,6 @@ elseif ($tab === 'transactions'): ?>
     </form>
 </div></div>
 
-<!-- Date order validation for transaction form -->
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     var form    = document.getElementById('txn-form');
@@ -389,7 +376,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     form.addEventListener('submit', function (e) {
         if (!checkDates()) e.preventDefault();
-    }, true); // capture phase so it runs before data-validate
+    }, true); 
 });
 </script>
 
@@ -418,8 +405,7 @@ document.addEventListener('DOMContentLoaded', function () {
     </tbody>
 </table></div></div>
 
-<?php /* ══════════════════════════════════════════ BORROW ITEMS ════════════ */
-elseif ($tab === 'items'): ?>
+<?php elseif ($tab === 'items'): ?>
 
 <div class="card" style="margin-bottom:16px"><div class="card-body">
     <p style="font-size:12px;font-weight:600;color:#6b7280;margin-bottom:10px"><?= $editItem ? 'EDIT BORROW ITEM (qty only)' : 'ADD BORROW ITEM' ?></p>

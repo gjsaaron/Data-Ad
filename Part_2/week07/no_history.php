@@ -10,7 +10,6 @@ $noHistory = $pdo->query("
     ORDER BY e.equipment_name
 ")->fetchAll();
 
-// All equipment with borrow count for context
 $allEquip = $pdo->query("
     SELECT
         e.property_no,

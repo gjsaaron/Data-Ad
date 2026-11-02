@@ -1,6 +1,5 @@
-</div><!-- /main -->
+</div>
 
-<!-- ── Toast Popup ─────────────────────────────────────────────────────────── -->
 <div id="toast">
     <div class="toast-inner">
         <span class="toast-icon" id="toast-icon">⚠️</span>
@@ -13,14 +12,13 @@
 </div>
 
 <script>
-// ── Toast API (available on every page) ──────────────────────────────────────
 let _toastTimer;
 
 function showToast(message, type = 'error', title = null) {
-    const t     = document.getElementById('toast');
-    const icon  = document.getElementById('toast-icon');
-    const tit   = document.getElementById('toast-title');
-    const msg   = document.getElementById('toast-msg');
+    const t    = document.getElementById('toast');
+    const icon = document.getElementById('toast-icon');
+    const tit  = document.getElementById('toast-title');
+    const msg  = document.getElementById('toast-msg');
 
     const cfg = {
         error:   { cls: 'toast-error',   icon: '❌', label: 'Error'   },
@@ -38,12 +36,9 @@ function showToast(message, type = 'error', title = null) {
 }
 
 function hideToast() {
-    const t = document.getElementById('toast');
-    t.classList.remove('show');
+    document.getElementById('toast').classList.remove('show');
 }
 
-// ── Numeric-only input enforcement ───────────────────────────────────────────
-// Any <input data-numeric> will block non-digit characters
 document.addEventListener('DOMContentLoaded', function () {
 
     document.querySelectorAll('input[data-numeric]').forEach(function (input) {
@@ -55,9 +50,7 @@ document.addEventListener('DOMContentLoaded', function () {
             setTimeout(function () { input.classList.remove('input-error'); }, 1500);
         }
 
-        // 1. beforeinput — fires BEFORE the value changes (keyboard, IME, mobile)
         input.addEventListener('beforeinput', function (e) {
-            // Allow control actions (delete, backspace, cut, etc.)
             if (!e.data) return;
             if (!/^\d+$/.test(e.data)) {
                 e.preventDefault();
@@ -65,18 +58,15 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
 
-        // 2. paste — intercept clipboard content
         input.addEventListener('paste', function (e) {
             e.preventDefault();
-            var text = (e.clipboardData || window.clipboardData).getData('text');
+            var text   = (e.clipboardData || window.clipboardData).getData('text');
             var digits = text.replace(/[^0-9]/g, '');
             if (text !== digits) reject('"' + lbl + '" only accepts digits — non-numeric characters were removed.');
-            // Insert only the clean digits at cursor position
             var start = this.selectionStart, end = this.selectionEnd;
             this.value = this.value.slice(0, start) + digits + this.value.slice(end);
         });
 
-        // 3. drop — block drag-and-drop of text containing non-digits
         input.addEventListener('drop', function (e) {
             var text = e.dataTransfer.getData('text');
             if (!/^\d+$/.test(text)) {
@@ -85,7 +75,6 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
 
-        // 4. input — last-resort cleanup (handles autofill, browser edge cases)
         input.addEventListener('input', function () {
             var clean = this.value.replace(/[^0-9]/g, '');
             if (clean !== this.value) {
@@ -95,25 +84,24 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // ── Form submit validation ────────────────────────────────────────────────
     document.querySelectorAll('form[data-validate]').forEach(function (form) {
         form.addEventListener('submit', function (e) {
-            let firstError = null;
+            var firstError = null;
 
             form.querySelectorAll('input[required], select[required]').forEach(function (field) {
                 if (!field.value.trim()) {
                     field.classList.add('input-error');
                     firstError = firstError || ('"' + (field.dataset.label || field.placeholder || field.name) + '" is required.');
-                    setTimeout(() => field.classList.remove('input-error'), 2000);
+                    setTimeout(function () { field.classList.remove('input-error'); }, 2000);
                 }
             });
 
             form.querySelectorAll('input[data-numeric]').forEach(function (field) {
-                if (field.value === '') return; // already caught by required check above
+                if (field.value === '') return;
                 if (!/^\d+$/.test(field.value)) {
                     field.classList.add('input-error');
                     firstError = firstError || ('"' + (field.dataset.label || field.name) + '" must be a whole number (digits only).');
-                    setTimeout(() => field.classList.remove('input-error'), 2000);
+                    setTimeout(function () { field.classList.remove('input-error'); }, 2000);
                     return;
                 }
                 var v   = parseInt(field.value, 10);
@@ -123,11 +111,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (min !== null && v < min) {
                     field.classList.add('input-error');
                     firstError = firstError || ('"' + lbl + '" must be at least ' + min + '.');
-                    setTimeout(() => field.classList.remove('input-error'), 2000);
+                    setTimeout(function () { field.classList.remove('input-error'); }, 2000);
                 } else if (max !== null && v > max) {
                     field.classList.add('input-error');
                     firstError = firstError || ('"' + lbl + '" must be at most ' + max + '.');
-                    setTimeout(() => field.classList.remove('input-error'), 2000);
+                    setTimeout(function () { field.classList.remove('input-error'); }, 2000);
                 }
             });
 

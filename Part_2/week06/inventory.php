@@ -30,7 +30,6 @@ $rows = $pdo->query("
     ORDER BY $sortBy $sortDir
 ")->fetchAll();
 
-// filter by stock status
 $rows = array_filter($rows, function($r) use ($stock) {
     $a = (int)$r['available_now']; $o = (int)$r['owned'];
     if ($stock === 'out_of_stock') return $a <= 0;
@@ -39,7 +38,6 @@ $rows = array_filter($rows, function($r) use ($stock) {
     return true;
 });
 
-// DISTINCT borrower types
 $types = $pdo->query("SELECT DISTINCT borrower_type FROM borrowers ORDER BY borrower_type")->fetchAll(PDO::FETCH_COLUMN);
 
 $pageTitle   = 'Equipment Inventory Listing';
@@ -47,12 +45,10 @@ $currentPage = 'inventory';
 require_once '../includes/header.php';
 ?>
 
-<!-- Distinct borrower types -->
 <p style="margin-bottom:16px;color:#6b7280;font-size:13px">
     Borrower types: <?= implode(', ', array_map('htmlspecialchars', $types)) ?>
 </p>
 
-<!-- Filters -->
 <form method="get" class="filter-row">
     <div class="form-group">
         <label>Stock Status</label>

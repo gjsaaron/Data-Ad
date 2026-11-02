@@ -1,9 +1,6 @@
 <?php
 $pageTitle   = $pageTitle   ?? 'Equipment Borrowing System';
 $currentPage = $currentPage ?? '';
-
-// Depth helper: pages in subfolders need '../' to reach BASE_URL correctly
-// BASE_URL is already an absolute path so links are always correct.
 ?>
 <!DOCTYPE html>
 <html lang="en">

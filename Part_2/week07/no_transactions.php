@@ -1,9 +1,6 @@
 <?php
 require_once '../db.php';
 
-// LEFT JOIN: borrowers who have NO transactions
-// The key: LEFT JOIN keeps all borrowers, then WHERE bt.borrow_id IS NULL
-// keeps only those with no matching transaction row.
 $noTxn = $pdo->query("
     SELECT
         b.borrower_no,
@@ -15,7 +12,6 @@ $noTxn = $pdo->query("
     ORDER BY b.borrower_type, b.full_name
 ")->fetchAll();
 
-// For context: all borrowers with their transaction count
 $allBorrowers = $pdo->query("
     SELECT
         b.borrower_no,

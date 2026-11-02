@@ -1,7 +1,6 @@
 <?php
 require_once '../db.php';
 
-// Check if function exists
 function fnExists(PDO $pdo, string $fn): bool {
     return (bool) $pdo->prepare("SELECT 1 FROM pg_proc WHERE proname = ?")->execute([$fn]) &&
            (bool) $pdo->prepare("SELECT 1 FROM pg_proc WHERE proname = ?")->execute([$fn])->fetchColumn();
@@ -16,7 +15,6 @@ function checkFn(PDO $pdo, string $fn): bool {
 $fn1ok = checkFn($pdo, 'fn_total_borrowed');
 $fn2ok = checkFn($pdo, 'fn_check_equipment_availability');
 
-// Availability check result (from form)
 $checkResult = null;
 if ($fn2ok && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $eqId = (int)($_POST['equip_id'] ?? 0);
@@ -28,7 +26,6 @@ if ($fn2ok && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// All equipment with fn_total_borrowed result
 $equipList = [];
 if ($fn1ok) {
     $equipList = $pdo->query("
@@ -84,7 +81,6 @@ require_once '../includes/header.php';
     </div>
 </div>
 
-<!-- fn_check_equipment_availability form -->
 <p class="result-count">fn_check_equipment_availability(id, qty) — PL/pgSQL function, returns availability message</p>
 <div class="card">
     <div class="card-body">

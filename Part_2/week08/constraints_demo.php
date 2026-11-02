@@ -1,13 +1,12 @@
 <?php
 require_once '../db.php';
 
-// Run a constraint test and return result label + message
 function runTest(PDO $pdo, string $sql, array $params = []): array {
     try {
         $pdo->beginTransaction();
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
-        $pdo->rollBack(); // always rollback — just testing
+        $pdo->rollBack(); 
         return ['pass' => false, 'label' => 'No Error (unexpected)', 'msg' => 'The constraint did NOT fire.'];
     } catch (PDOException $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
@@ -20,14 +19,12 @@ $tests = [];
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $run = $_POST['run'] ?? '';
 
-    // Get real IDs for use in tests
     $borrowerId = (int) $pdo->query("SELECT borrower_id FROM borrowers LIMIT 1")->fetchColumn();
     $equipId    = (int) $pdo->query("SELECT equipment_id FROM equipment LIMIT 1")->fetchColumn();
     $borrowId   = (int) $pdo->query("SELECT borrow_id FROM borrow_transactions LIMIT 1")->fetchColumn();
     $existingItem = $pdo->query("SELECT borrow_id, equipment_id FROM borrow_items LIMIT 1")->fetch();
 
     if ($run === '1' || $run === 'all') {
-        // Test 1: UNIQUE on equipment.property_no
         $existing = $pdo->query("SELECT property_no FROM equipment LIMIT 1")->fetchColumn();
         $tests[1] = ['name' => 'UNIQUE — duplicate property_no',
             'desc' => "Tries to insert an equipment with an already-existing property_no.",
@@ -36,7 +33,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 [$existing, 'Duplicate Test'])];
     }
     if ($run === '2' || $run === 'all') {
-        // Test 2: CHECK — negative quantity_available
         $tests[2] = ['name' => 'CHECK — negative quantity_available',
             'desc' => "Tries to insert equipment with quantity_available = -1 (violates CHECK >= 0).",
             'result' => runTest($pdo,
@@ -44,14 +40,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 [-1])];
     }
     if ($run === '3' || $run === 'all') {
-        // Test 3: FOREIGN KEY — invalid borrower_id on transaction
         $tests[3] = ['name' => 'FOREIGN KEY — invalid borrower_id',
             'desc' => "Tries to create a transaction referencing borrower_id = 99999 (does not exist).",
             'result' => runTest($pdo,
                 "INSERT INTO borrow_transactions (borrower_id, borrow_date, due_date, status) VALUES (99999, CURRENT_DATE, CURRENT_DATE+1, 'Borrowed')")];
     }
     if ($run === '4' || $run === 'all') {
-        // Test 4: CHECK — invalid status value
         $tests[4] = ['name' => "CHECK — invalid status value",
             'desc' => "Tries to insert a transaction with status = 'Invalid' (not in the allowed list).",
             'result' => runTest($pdo,
@@ -59,7 +53,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 [$borrowerId])];
     }
     if ($run === '5' || $run === 'all') {
-        // Test 5: CHECK — due_date before borrow_date
         $tests[5] = ['name' => 'CHECK — due_date before borrow_date',
             'desc' => "Tries to insert a transaction where due_date (yesterday) < borrow_date (today).",
             'result' => runTest($pdo,
