@@ -23,7 +23,7 @@ $currentPage = $currentPage ?? '';
         .sidebar {
             width: 200px;
             min-width: 200px;
-            background: #fff;
+            background: #ffffff;
             border-right: 1px solid #e5e7eb;
             min-height: 100vh;
             position: fixed;

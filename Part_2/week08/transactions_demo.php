@@ -24,8 +24,8 @@ if ($action === 'success') {
         if (!$borrower || !$equip) throw new RuntimeException('No available equipment found for test.');
 
         $stmt = $pdo->prepare("
-            INSERT INTO borrow_transactions (borrower_id, borrow_date, due_date, status)
-            VALUES (?, CURRENT_DATE, CURRENT_DATE + 3, 'Borrowed')
+            INSERT INTO borrow_transactions (borrower_id, borrow_date, due_date, status, fine_rate)
+            VALUES (?, CURRENT_DATE, CURRENT_DATE + 3, 'Borrowed', 5.00)
             RETURNING borrow_id
         ");
         $stmt->execute([$borrower]);
@@ -36,7 +36,7 @@ if ($action === 'success') {
             VALUES (?, ?, 1)
         ")->execute([$borrowId, $equip]);
 
-        $pdo->commit();  
+        $pdo->commit();
 
         $result = ['type' => 'success', 'msg' => "Transaction committed. New borrow_id = $borrowId, equipment_id = $equip, qty = 1."];
 
@@ -53,8 +53,8 @@ if ($action === 'success') {
         $equip    = $pdo->query("SELECT equipment_id FROM equipment LIMIT 1")->fetchColumn();
 
         $stmt = $pdo->prepare("
-            INSERT INTO borrow_transactions (borrower_id, borrow_date, due_date, status)
-            VALUES (?, CURRENT_DATE, CURRENT_DATE + 3, 'Borrowed')
+            INSERT INTO borrow_transactions (borrower_id, borrow_date, due_date, status, fine_rate)
+            VALUES (?, CURRENT_DATE, CURRENT_DATE + 3, 'Borrowed', 5.00)
             RETURNING borrow_id
         ");
         $stmt->execute([$borrower]);

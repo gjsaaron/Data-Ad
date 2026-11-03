@@ -7,21 +7,22 @@ function viewExists(PDO $pdo, string $view): bool {
     return (bool) $r->fetchColumn();
 }
 
-$v1ok = viewExists($pdo, 'vw_borrowing_details');
-$v2ok = viewExists($pdo, 'vw_equipment_usage');
+$v1ok   = viewExists($pdo, 'vw_borrowing_details');
+$v2ok   = viewExists($pdo, 'vw_equipment_usage');
+$v3ok   = viewExists($pdo, 'v_overdue_fines');
 
 $details = $v1ok ? $pdo->query("SELECT * FROM vw_borrowing_details ORDER BY borrow_date DESC")->fetchAll() : [];
 $usage   = $v2ok ? $pdo->query("SELECT * FROM vw_equipment_usage ORDER BY total_transactions DESC")->fetchAll() : [];
+$fines   = $v3ok ? $pdo->query("SELECT * FROM v_overdue_fines ORDER BY total_fine DESC")->fetchAll() : [];
 
 $pageTitle   = 'Database Views';
 $currentPage = 'views';
 require_once '../includes/header.php';
 ?>
 
-<?php if (!$v1ok || !$v2ok): ?>
+<?php if (!$v1ok || !$v2ok || !$v3ok): ?>
 <div class="alert alert-danger">
-    Views not found. Run <strong>sql/01_views.sql</strong> in pgAdmin first,
-    then reload this page.
+    One or more views not found. Run <strong>sql/01_views.sql</strong> and <strong>sql/04_fine_and_constraints.sql</strong> in pgAdmin, then reload.
 </div>
 <?php endif; ?>
 
@@ -101,6 +102,53 @@ require_once '../includes/header.php';
                 </tr>
             <?php endforeach; ?>
             </tbody>
+        </table>
+    </div>
+</div>
+<?php endif; ?>
+
+<?php if ($v3ok): ?>
+<p class="result-count">
+    View: <strong>v_overdue_fines</strong> — ROUND · GREATEST · days overdue × fine_rate
+    (<?= count($fines) ?> rows)
+</p>
+<div class="card" style="margin-bottom:20px">
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Txn ID</th><th>Borrower No.</th><th>Name</th>
+                    <th>Borrow Date</th><th>Due Date</th><th>Status</th>
+                    <th class="text-right">Fine Rate</th>
+                    <th class="text-right">Days Overdue</th>
+                    <th class="text-right">Total Fine (ROUND)</th>
+                </tr>
+            </thead>
+            <tbody>
+            <?php foreach ($fines as $r): ?>
+                <tr>
+                    <td class="text-muted"><?= $r['borrow_id'] ?></td>
+                    <td><?= htmlspecialchars($r['borrower_no']) ?></td>
+                    <td><?= htmlspecialchars($r['full_name']) ?></td>
+                    <td><?= $r['borrow_date'] ?></td>
+                    <td><?= $r['due_date'] ?></td>
+                    <td><?= statusBadge($r['status']) ?></td>
+                    <td class="text-right">₱<?= number_format((float)$r['fine_rate'], 2) ?></td>
+                    <td class="text-right"><?= $r['days_overdue'] > 0 ? '<span style="color:#dc2626;font-weight:600">' . (int)$r['days_overdue'] . '</span>' : '<span style="color:#9ca3af">0</span>' ?></td>
+                    <td class="text-right"><?= $r['total_fine'] > 0 ? '<span style="color:#dc2626;font-weight:700">₱' . number_format((float)$r['total_fine'], 0) . '</span>' : '<span style="color:#9ca3af">₱0</span>' ?></td>
+                </tr>
+            <?php endforeach; ?>
+            <?php if (empty($fines)): ?><tr><td colspan="9" class="text-center text-muted" style="padding:16px">No data.</td></tr><?php endif; ?>
+            </tbody>
+            <?php if (!empty($fines)): ?>
+            <tfoot>
+                <?php $grand = array_sum(array_column($fines, 'total_fine')); ?>
+                <tr>
+                    <td colspan="8">Grand Total Fines</td>
+                    <td class="text-right" style="color:#dc2626;font-weight:700">₱<?= number_format((float)$grand, 0) ?></td>
+                </tr>
+            </tfoot>
+            <?php endif; ?>
         </table>
     </div>
 </div>

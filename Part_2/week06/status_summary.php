@@ -14,9 +14,17 @@ $rows = $pdo->query("
 $detail = $pdo->query("
     SELECT
         bt.status,
-        COUNT(DISTINCT bt.borrow_id) AS transactions,
-        COUNT(bi.borrow_item_id) AS item_lines,
-        COALESCE(SUM(bi.quantity), 0) AS total_qty
+        COUNT(DISTINCT bt.borrow_id)                                                    AS transactions,
+        COUNT(bi.borrow_item_id)                                                        AS item_lines,
+        COALESCE(SUM(bi.quantity), 0)                                                   AS total_qty,
+        COALESCE(
+            SUM(
+                CASE WHEN bt.status = 'Overdue'
+                     THEN ROUND(GREATEST(0, CURRENT_DATE - bt.due_date) * bt.fine_rate, 0)
+                     ELSE 0
+                END
+            ), 0
+        )                                                                               AS total_fine
     FROM borrow_transactions bt
     LEFT JOIN borrow_items bi ON bi.borrow_id = bt.borrow_id
     GROUP BY bt.status
@@ -41,7 +49,7 @@ require_once '../includes/header.php';
             <tbody>
             <?php foreach ($rows as $r): ?>
                 <tr>
-                    <td><?= htmlspecialchars($r['status']) ?></td>
+                    <td><?= statusBadge($r['status']) ?></td>
                     <td class="text-right"><?= $r['cnt'] ?></td>
                     <td class="text-right"><?= $r['pct'] ?>%</td>
                 </tr>
@@ -60,18 +68,33 @@ require_once '../includes/header.php';
                     <th class="text-right">Transactions</th>
                     <th class="text-right">Item Lines</th>
                     <th class="text-right">Total Qty</th>
+                    <th class="text-right">Total Fine (ROUND)</th>
                 </tr>
             </thead>
             <tbody>
             <?php foreach ($detail as $r): ?>
                 <tr>
-                    <td><?= htmlspecialchars($r['status']) ?></td>
+                    <td><?= statusBadge($r['status']) ?></td>
                     <td class="text-right"><?= $r['transactions'] ?></td>
                     <td class="text-right"><?= $r['item_lines'] ?></td>
                     <td class="text-right"><?= $r['total_qty'] ?></td>
+                    <td class="text-right">
+                        <?php if ($r['status'] === 'Overdue' && $r['total_fine'] > 0): ?>
+                            <span style="color:#dc2626;font-weight:700">₱<?= number_format((float)$r['total_fine'], 0) ?></span>
+                        <?php else: ?>
+                            <span style="color:#9ca3af">—</span>
+                        <?php endif; ?>
+                    </td>
                 </tr>
             <?php endforeach; ?>
             </tbody>
+            <tfoot>
+                <?php $totFine = array_sum(array_column($detail, 'total_fine')); ?>
+                <tr>
+                    <td colspan="4">Total Overdue Fines</td>
+                    <td class="text-right" style="color:#dc2626;font-weight:700">₱<?= number_format((float)$totFine, 0) ?></td>
+                </tr>
+            </tfoot>
         </table>
     </div>
 </div>
