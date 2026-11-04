@@ -36,13 +36,29 @@ try {
             FOREIGN KEY (equipment_id) REFERENCES equipment(equipment_id),
             UNIQUE (borrow_id, equipment_id)
         );
+        ALTER TABLE borrow_transactions
+            ADD COLUMN IF NOT EXISTS fine_rate NUMERIC(8,2) NOT NULL DEFAULT 5.00
+                CHECK (fine_rate >= 0);
     ");
 
-    // SEED DATA — only if tables are empty
+    $reset = isset($_GET['reset']) || isset($_POST['reset']) || (isset($argv) && in_array('--reset', $argv));
+
+    if ($reset) {
+        $pdo->exec("
+            TRUNCATE TABLE borrow_items, borrow_transactions, equipment, borrowers RESTART IDENTITY CASCADE;
+            DO $$ BEGIN
+                IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'borrow_items_audit') THEN
+                    TRUNCATE TABLE borrow_items_audit RESTART IDENTITY CASCADE;
+                END IF;
+            END $$;
+        ");
+    }
+
+    // SEED DATA — if empty or reset requested
     $total = (int) $pdo->query("SELECT COUNT(*) FROM borrowers")->fetchColumn()
            + (int) $pdo->query("SELECT COUNT(*) FROM equipment")->fetchColumn();
 
-    if ($total === 0) {
+    if ($total === 0 || $reset) {
         $pdo->beginTransaction();
 
         $b = $pdo->prepare('INSERT INTO borrowers (borrower_no,full_name,borrower_type) VALUES(?,?,?) RETURNING borrower_id');
@@ -72,7 +88,7 @@ try {
             ['P-1010','Wireless Presenter',8],
         ] as $r) { $e->execute($r); $eids[$r[0]] = (int)$e->fetchColumn(); }
 
-        $t = $pdo->prepare('INSERT INTO borrow_transactions (borrower_id,borrow_date,due_date,status) VALUES(?,?,?,?) RETURNING borrow_id');
+        $t = $pdo->prepare('INSERT INTO borrow_transactions (borrower_id,borrow_date,due_date,status,fine_rate) VALUES(?,?,?,?,5.00) RETURNING borrow_id');
         $tids = [];
         foreach ([
             ['B-0001','2026-09-10','2026-09-12','Returned'],
@@ -102,7 +118,22 @@ try {
         ] as $r) { $i->execute([$tids[$r[0]],$eids[$r[1]],$r[2]]); }
 
         $pdo->commit();
+
+        // Clear audit log generated from initial seed so it's clean for demo tests
+        $pdo->exec("
+            DO $$ BEGIN
+                IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'borrow_items_audit') THEN
+                    TRUNCATE TABLE borrow_items_audit RESTART IDENTITY CASCADE;
+                END IF;
+            END $$;
+        ");
+
         $seeded = true;
+    }
+
+    // Refresh views if sql/01_views.sql exists
+    if (file_exists(__DIR__ . '/sql/01_views.sql')) {
+        $pdo->exec(file_get_contents(__DIR__ . '/sql/01_views.sql'));
     }
 
     $counts = [
@@ -110,6 +141,7 @@ try {
         'equipment'          => $pdo->query("SELECT COUNT(*) FROM equipment")->fetchColumn(),
         'borrow_transactions'=> $pdo->query("SELECT COUNT(*) FROM borrow_transactions")->fetchColumn(),
         'borrow_items'       => $pdo->query("SELECT COUNT(*) FROM borrow_items")->fetchColumn(),
+        'audit_records'      => (int) ($pdo->query("SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'borrow_items_audit'")->fetchColumn() ? $pdo->query("SELECT COUNT(*) FROM borrow_items_audit")->fetchColumn() : 0),
     ];
 
 } catch (Throwable $err) {
@@ -120,15 +152,19 @@ try {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>DB Setup</title>
+    <title>DB Setup & Demo Seeder</title>
     <style>
-        body { font-family: Arial, sans-serif; max-width: 500px; margin: 60px auto; padding: 0 16px; }
-        h2   { margin-bottom: 12px; }
-        p    { margin: 6px 0; color: #333; }
-        .ok  { color: green; font-weight: bold; }
-        .err { color: red;   font-weight: bold; }
-        a    { display: inline-block; margin-top: 20px; padding: 10px 20px;
-               background: #3b82f6; color: #fff; border-radius: 6px; text-decoration: none; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; max-width: 540px; margin: 50px auto; padding: 24px; background: #f8fafc; color: #1e293b; border-radius: 12px; border: 1px solid #e2e8f0; }
+        h2   { margin-top: 0; margin-bottom: 12px; }
+        p    { margin: 6px 0; font-size: 14px; }
+        .ok  { color: #166534; font-weight: 600; }
+        .err { color: #dc2626; font-weight: 600; }
+        .stats { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; margin: 16px 0; }
+        .stats p { display: flex; justify-content: space-between; margin: 6px 0; }
+        .actions { display: flex; gap: 10px; margin-top: 20px; align-items: center; }
+        .btn { display: inline-block; padding: 8px 16px; background: #2563eb; color: #fff; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 500; border: none; cursor: pointer; }
+        .btn-danger { background: #dc2626; }
+        .btn:hover { opacity: 0.9; }
     </style>
 </head>
 <body>
@@ -137,22 +173,28 @@ try {
     <h2>❌ Setup Failed</h2>
     <p class="err"><?= htmlspecialchars($err->getMessage()) ?></p>
     <p>Check your PostgreSQL connection in <code>db.php</code>.</p>
+    <div class="actions">
+        <a href="setup.php?reset=1" class="btn btn-danger">Retry Reset & Seed</a>
+    </div>
 
 <?php else: ?>
     <h2>✅ Database Ready</h2>
-    <p class="ok">Tables created successfully.</p>
-    <?php if (!empty($seeded)): ?>
-        <p class="ok">Sample data inserted.</p>
-    <?php else: ?>
-        <p>Data already existed — seed skipped.</p>
-    <?php endif; ?>
-    <br>
-    <p>borrowers: <strong><?= $counts['borrowers'] ?></strong></p>
-    <p>equipment: <strong><?= $counts['equipment'] ?></strong></p>
-    <p>transactions: <strong><?= $counts['borrow_transactions'] ?></strong></p>
-    <p>borrow items: <strong><?= $counts['borrow_items'] ?></strong></p>
+    <p class="ok"><?= !empty($reset) ? 'Database truncated and fresh demo data seeded successfully.' : (!empty($seeded) ? 'Sample data inserted successfully.' : 'Data already exists.') ?></p>
 
-    <a href="index.php">Go to Dashboard →</a>
+    <div class="stats">
+        <p><span>Borrowers:</span> <strong><?= $counts['borrowers'] ?></strong></p>
+        <p><span>Equipment:</span> <strong><?= $counts['equipment'] ?></strong></p>
+        <p><span>Transactions:</span> <strong><?= $counts['borrow_transactions'] ?></strong></p>
+        <p><span>Borrow Items:</span> <strong><?= $counts['borrow_items'] ?></strong></p>
+        <p><span>Audit Log Records:</span> <strong><?= $counts['audit_records'] ?></strong></p>
+    </div>
+
+    <div class="actions">
+        <a href="index.php" class="btn">Go to Dashboard →</a>
+        <form method="post" action="setup.php" onsubmit="return confirm('Are you sure you want to truncate and re-seed all demo data?')" style="margin:0">
+            <button type="submit" name="reset" value="1" class="btn btn-danger">↺ Truncate & Re-Seed</button>
+        </form>
+    </div>
 <?php endif; ?>
 
 </body>
