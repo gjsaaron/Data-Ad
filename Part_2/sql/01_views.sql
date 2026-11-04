@@ -53,11 +53,14 @@ SELECT
              - COALESCE(SUM(CASE WHEN bt.status IN ('Borrowed','Overdue')
                                  THEN bi.quantity END), 0) <= 0
              THEN 'Out of Stock'
-        WHEN e.quantity_available > 0
-             AND (  e.quantity_available
-                  - COALESCE(SUM(CASE WHEN bt.status IN ('Borrowed','Overdue')
-                                      THEN bi.quantity END), 0)
-                 )::NUMERIC / e.quantity_available <= 0.25
+        WHEN (e.quantity_available
+              - COALESCE(SUM(CASE WHEN bt.status IN ('Borrowed','Overdue')
+                                  THEN bi.quantity END), 0)) BETWEEN 1 AND 2
+             OR (e.quantity_available > 0
+                 AND (  e.quantity_available
+                      - COALESCE(SUM(CASE WHEN bt.status IN ('Borrowed','Overdue')
+                                          THEN bi.quantity END), 0)
+                     )::NUMERIC / e.quantity_available <= 0.25)
              THEN 'Low Stock'
         ELSE 'Available'
     END AS availability_status

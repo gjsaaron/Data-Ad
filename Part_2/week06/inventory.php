@@ -32,7 +32,7 @@ $rows = $pdo->query("
 
 $rows = array_filter($rows, function($r) use ($stock) {
     $a = (int)$r['available_now']; $o = (int)$r['owned'];
-    $isLow = ($o > 0 && (($a / $o) <= 0.25 || ($a <= 2 && $a < $o)));
+    $isLow = $a > 0 && ($a <= 2 || ($o > 0 && ($a / $o) <= 0.25));
     if ($stock === 'out_of_stock') return $a <= 0;
     if ($stock === 'low_stock')    return $a > 0 && $isLow;
     if ($stock === 'in_stock')     return $a > 0 && !$isLow;
@@ -100,7 +100,7 @@ require_once '../includes/header.php';
                 $avail = (int)$r['available_now'];
                 $owned = (int)$r['owned'];
                 $status = $avail <= 0 ? 'Out of Stock'
-                        : ($owned > 0 && ($avail/$owned) <= 0.25 ? 'Low Stock' : 'In Stock');
+                        : (($avail <= 2 || ($owned > 0 && ($avail/$owned) <= 0.25)) ? 'Low Stock' : 'In Stock');
             ?>
                 <tr>
                     <td><?= htmlspecialchars($r['property_no']) ?></td>

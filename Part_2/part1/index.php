@@ -799,7 +799,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     <?php foreach ($allEquipment as $e):
                         $a = (int)($e['available_now'] ?? $e['quantity_available']);
                         $o = (int)$e['quantity_available'];
-                        $isLow = ($o > 0 && (($a / $o) <= 0.25 || ($a <= 2 && $a < $o)));
+                        $isLow = $a > 0 && ($a <= 2 || ($o > 0 && ($a / $o) <= 0.25));
                         $stockLabel = $a <= 0 ? 'Out of Stock' : ($isLow ? 'Available — Low Stock' : 'Available');
                     ?>
                     <option value="<?= $e['equipment_id'] ?>">
