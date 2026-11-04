@@ -98,7 +98,7 @@ require_once '../includes/header.php';
                     <td class="text-right"><?= $r['available_now'] ?></td>
                     <td class="text-right"><?= $r['avg_qty_per_borrow'] ?></td>
                     <td class="text-right"><?= $r['abs_stock_diff'] ?></td>
-                    <td><?= htmlspecialchars($r['availability_status']) ?></td>
+                    <td><?= availBadge((int)$r['available_now'], (int)$r['units_owned']) ?></td>
                 </tr>
             <?php endforeach; ?>
             </tbody>

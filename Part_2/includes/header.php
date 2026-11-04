@@ -132,6 +132,9 @@ $currentPage = $currentPage ?? '';
         .badge-student   { background: #ede9fe; color: #5b21b6; }
         .badge-faculty   { background: #fef9c3; color: #854d0e; }
         .badge-staff     { background: #dcfce7; color: #166534; }
+        .badge-instock   { background: #dcfce7; color: #166534; }
+        .badge-lowstock  { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+        .badge-outofstock { background: #fee2e2; color: #991b1b; }
 
         /* Forms */
         .filter-row {

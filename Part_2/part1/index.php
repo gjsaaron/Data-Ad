@@ -12,10 +12,6 @@ try {
         ALTER TABLE borrow_transactions
             ADD COLUMN IF NOT EXISTS fine_rate NUMERIC(8,2) NOT NULL DEFAULT 5.00
                 CHECK (fine_rate >= 0);
-        ALTER TABLE borrowers
-            ADD CONSTRAINT IF NOT EXISTS uq_borrowers_full_name UNIQUE (full_name);
-        ALTER TABLE equipment
-            ADD CONSTRAINT IF NOT EXISTS uq_equipment_name UNIQUE (equipment_name);
     ");
 } catch (Throwable $_) {}
 
@@ -266,7 +262,18 @@ $fnAvailOk = checkFn($pdo, 'fn_check_equipment_availability');
 $fnFineOk  = checkFn($pdo, 'fn_calculate_fine');
 
 $allBorrowers    = $pdo->query('SELECT * FROM borrowers ORDER BY full_name')->fetchAll();
-$allEquipment    = $pdo->query('SELECT * FROM equipment ORDER BY equipment_name')->fetchAll();
+$allEquipment    = $pdo->query("
+    SELECT e.*,
+           (e.quantity_available - COALESCE((
+               SELECT SUM(bi.quantity)
+               FROM borrow_items bi
+               JOIN borrow_transactions bt ON bt.borrow_id = bi.borrow_id
+               WHERE bi.equipment_id = e.equipment_id
+                 AND bt.status IN ('Borrowed','Overdue')
+           ), 0)) AS available_now
+    FROM equipment e
+    ORDER BY e.equipment_name
+")->fetchAll();
 $allTransactions = $pdo->query('
     SELECT t.borrow_id, t.status, b.full_name
     FROM borrow_transactions t
@@ -600,6 +607,7 @@ $isAvail = str_starts_with($topMsg, 'AVAILABLE');
         <th class="text-right">Qty Owned</th>
         <th class="text-right">Units Out</th>
         <th class="text-right">Available Now</th>
+        <th>Stock Status</th>
         <th>Availability (Qty <?= $checkQty ?>)</th>
         <th></th>
     </tr></thead>
@@ -607,6 +615,8 @@ $isAvail = str_starts_with($topMsg, 'AVAILABLE');
     <?php foreach ($equipment as $r): ?>
     <?php
     $isAvail = str_starts_with($r['avail_status'] ?? '', 'AVAILABLE');
+    $availNow = (int)$r['available_now'];
+    $owned = (int)$r['quantity_available'];
     ?>
     <tr>
         <td class="text-muted"><?= $r['equipment_id'] ?></td>
@@ -615,6 +625,7 @@ $isAvail = str_starts_with($topMsg, 'AVAILABLE');
         <td class="text-right"><?= $r['quantity_available'] ?></td>
         <td class="text-right"><?= $r['units_out'] ?></td>
         <td class="text-right"><strong><?= $r['available_now'] ?></strong></td>
+        <td><?= availBadge($availNow, $owned) ?></td>
         <td>
             <span class="badge <?= $isAvail ? 'badge-returned' : 'badge-overdue' ?>" title="<?= htmlspecialchars($r['avail_status'] ?? '') ?>">
                 <?= $isAvail ? 'Available' : 'Unavailable' ?>
@@ -630,7 +641,7 @@ $isAvail = str_starts_with($topMsg, 'AVAILABLE');
         </td>
     </tr>
     <?php endforeach; ?>
-    <?php if (empty($equipment)): ?><tr><td colspan="8" class="text-center text-muted" style="padding:20px">No equipment found.</td></tr><?php endif; ?>
+    <?php if (empty($equipment)): ?><tr><td colspan="9" class="text-center text-muted" style="padding:20px">No equipment found.</td></tr><?php endif; ?>
     </tbody>
 </table></div></div>
 
@@ -785,8 +796,15 @@ document.addEventListener('DOMContentLoaded', function () {
             <div class="form-group">
                 <label>Equipment</label>
                 <select name="equipment_id" style="min-width:180px">
-                    <?php foreach ($allEquipment as $e): ?>
-                    <option value="<?= $e['equipment_id'] ?>"><?= htmlspecialchars($e['equipment_name']) ?> (<?= $e['quantity_available'] ?> avail)</option>
+                    <?php foreach ($allEquipment as $e):
+                        $a = (int)($e['available_now'] ?? $e['quantity_available']);
+                        $o = (int)$e['quantity_available'];
+                        $isLow = ($o > 0 && (($a / $o) <= 0.25 || ($a <= 2 && $a < $o)));
+                        $stockLabel = $a <= 0 ? 'Out of Stock' : ($isLow ? 'Available — Low Stock' : 'Available');
+                    ?>
+                    <option value="<?= $e['equipment_id'] ?>">
+                        <?= htmlspecialchars($e['equipment_name']) ?> (<?= $a ?> left — <?= $stockLabel ?>)
+                    </option>
                     <?php endforeach; ?>
                     <?php if (empty($allEquipment)): ?><option disabled>No equipment found</option><?php endif; ?>
                 </select>

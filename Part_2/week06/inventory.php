@@ -32,9 +32,10 @@ $rows = $pdo->query("
 
 $rows = array_filter($rows, function($r) use ($stock) {
     $a = (int)$r['available_now']; $o = (int)$r['owned'];
+    $isLow = ($o > 0 && (($a / $o) <= 0.25 || ($a <= 2 && $a < $o)));
     if ($stock === 'out_of_stock') return $a <= 0;
-    if ($stock === 'low_stock')    return $a > 0 && $o > 0 && ($a/$o) <= 0.25;
-    if ($stock === 'in_stock')     return $a > 0 && !($o > 0 && ($a/$o) <= 0.25);
+    if ($stock === 'low_stock')    return $a > 0 && $isLow;
+    if ($stock === 'in_stock')     return $a > 0 && !$isLow;
     return true;
 });
 
@@ -107,7 +108,7 @@ require_once '../includes/header.php';
                     <td class="text-right"><?= $owned ?></td>
                     <td class="text-right"><?= $r['units_out'] ?></td>
                     <td class="text-right fw-bold"><?= $avail ?></td>
-                    <td><?= $status ?></td>
+                    <td><?= availBadge($avail, $owned) ?></td>
                 </tr>
             <?php endforeach; ?>
             </tbody>

@@ -74,6 +74,7 @@ require_once '../includes/header.php';
                     <th class="text-right">Qty Owned</th>
                     <th class="text-right">Units Out (fn_total_borrowed)</th>
                     <th class="text-right">Available Now</th>
+                    <th>Stock Status</th>
                 </tr>
             </thead>
             <tbody>
@@ -85,6 +86,7 @@ require_once '../includes/header.php';
                     <td class="text-right"><?= $r['quantity_available'] ?></td>
                     <td class="text-right"><?= $r['units_out'] ?></td>
                     <td class="text-right"><?= $r['available_now'] ?></td>
+                    <td><?= availBadge((int)$r['available_now'], (int)$r['quantity_available']) ?></td>
                 </tr>
             <?php endforeach; ?>
             </tbody>

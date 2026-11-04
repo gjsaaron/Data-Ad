@@ -5,9 +5,9 @@ define('DB_HOST', 'localhost');
 define('DB_PORT', '5432');
 define('DB_NAME', 'postgres');
 define('DB_USER', 'postgres');
-define('DB_PASS', 'Aaron0928');
+define('DB_PASS', 'krazy1001');
 
-define('BASE_URL', '/Data%20Ad/Part_2');
+define('BASE_URL', '/Data-Ad/Part_2');
 
 try {
     $pdo = new PDO(
@@ -69,8 +69,8 @@ function availBadge(int $availNow, int $owned): string
     if ($availNow <= 0) {
         return '<span class="badge badge-outofstock">Out of Stock</span>';
     }
-    if ($owned > 0 && ($availNow / $owned) <= 0.25) {
-        return '<span class="badge badge-lowstock">Low Stock</span>';
+    if ($owned > 0 && (($availNow / $owned) <= 0.25 || ($availNow <= 2 && $availNow < $owned))) {
+        return '<span class="badge badge-instock">Available</span> <span class="badge badge-lowstock">Low Stock</span>';
     }
     return '<span class="badge badge-instock">Available</span>';
 }
