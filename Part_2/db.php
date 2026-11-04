@@ -1,11 +1,11 @@
 <?php
 declare(strict_types=1);
 
-define('DB_HOST', 'localhost');
+define('DB_HOST', '172.20.10.3');
 define('DB_PORT', '5432');
 define('DB_NAME', 'postgres');
 define('DB_USER', 'postgres');
-define('DB_PASS', 'Aaron0928');
+define('DB_PASS', 'krazy1001');
 
 define('BASE_URL', '/Data%20Ad/Part_2');
 
@@ -20,6 +20,9 @@ try {
             PDO::ATTR_EMULATE_PREPARES   => false,
         ]
     );
+    try {
+        $pdo->exec("UPDATE borrow_transactions SET status = 'Overdue' WHERE status = 'Borrowed' AND due_date < CURRENT_DATE");
+    } catch (Throwable $_) {}
 } catch (PDOException $e) {
     http_response_code(500);
     die('

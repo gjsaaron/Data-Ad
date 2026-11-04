@@ -131,7 +131,13 @@ try {
         $seeded = true;
     }
 
-    // Refresh views if sql/01_views.sql exists
+    // Refresh functions, triggers and views
+    if (file_exists(__DIR__ . '/sql/fn_calculate_fine.sql')) {
+        $pdo->exec(file_get_contents(__DIR__ . '/sql/fn_calculate_fine.sql'));
+    }
+    if (file_exists(__DIR__ . '/sql/03_triggers.sql')) {
+        $pdo->exec(file_get_contents(__DIR__ . '/sql/03_triggers.sql'));
+    }
     if (file_exists(__DIR__ . '/sql/01_views.sql')) {
         $pdo->exec(file_get_contents(__DIR__ . '/sql/01_views.sql'));
     }

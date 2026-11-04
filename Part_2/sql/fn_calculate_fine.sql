@@ -11,7 +11,12 @@ BEGIN
       FROM borrow_transactions
      WHERE borrow_id = p_borrow_id;
 
-    IF NOT FOUND OR v_status <> 'Overdue' THEN
+    IF NOT FOUND THEN
+        RETURN 0;
+    END IF;
+
+    -- If status is Borrowed but past due date, treat as Overdue for fine calculation
+    IF v_status <> 'Overdue' AND NOT (v_status = 'Borrowed' AND CURRENT_DATE > v_due_date) THEN
         RETURN 0;
     END IF;
 

@@ -177,6 +177,8 @@ try {
         $rate   = round((float)($_POST['fine_rate'] ?? 5), 2);
         if ($rate < 0) throw new InvalidArgumentException('"Fine Rate" cannot be negative.');
         if ($ddate < $bdate) throw new InvalidArgumentException('Due Date must be on or after Borrow Date.');
+        if ($status === 'Borrowed' && $ddate < date('Y-m-d')) $status = 'Overdue';
+        elseif ($status === 'Overdue' && $ddate >= date('Y-m-d')) $status = 'Borrowed';
         queueOrRun($pdo, $txnActive, "Add Transaction ($status, $bdate)",
             'INSERT INTO borrow_transactions (borrower_id,borrow_date,due_date,status,fine_rate) VALUES (?,?,?,?,?)',
             [$bid, $bdate, $ddate, $status, $rate]);
@@ -191,6 +193,8 @@ try {
         $rate   = round((float)($_POST['fine_rate'] ?? 5), 2);
         if ($rate < 0) throw new InvalidArgumentException('"Fine Rate" cannot be negative.');
         if ($ddate < $bdate) throw new InvalidArgumentException('Due Date must be on or after Borrow Date.');
+        if ($status === 'Borrowed' && $ddate < date('Y-m-d')) $status = 'Overdue';
+        elseif ($status === 'Overdue' && $ddate >= date('Y-m-d')) $status = 'Borrowed';
         queueOrRun($pdo, $txnActive, "Update Transaction #$id ($status)",
             'UPDATE borrow_transactions SET borrower_id=?,borrow_date=?,due_date=?,status=?,fine_rate=? WHERE borrow_id=?',
             [$bid, $bdate, $ddate, $status, $rate, $id]);
@@ -707,6 +711,8 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!form) return;
     var bDate   = document.getElementById('borrow_date');
     var dDate   = document.getElementById('due_date');
+    var sSelect = form.querySelector('select[name="status"]');
+    var today   = new Date().toISOString().slice(0, 10);
 
     function checkDates() {
         if (bDate.value && dDate.value && dDate.value < bDate.value) {
@@ -715,6 +721,15 @@ document.addEventListener('DOMContentLoaded', function () {
             return false;
         }
         dDate.classList.remove('input-error');
+        if (dDate.value && sSelect) {
+            if (dDate.value < today && sSelect.value === 'Borrowed') {
+                sSelect.value = 'Overdue';
+                showToast('Due date has passed — status auto-switched to Overdue.', 'info', 'Auto Overdue');
+            } else if (dDate.value >= today && sSelect.value === 'Overdue') {
+                sSelect.value = 'Borrowed';
+                showToast('Due date is in the future — status auto-switched to Borrowed.', 'info', 'Status Updated');
+            }
+        }
         return true;
     }
 
@@ -732,7 +747,7 @@ document.addEventListener('DOMContentLoaded', function () {
     <thead><tr><th>ID</th><th>Borrower</th><th>Borrow Date</th><th>Due Date</th><th>Status</th><th class="text-right">Fine Rate</th><th class="text-right">Days Overdue</th><th class="text-right">Total Fine</th><th></th></tr></thead>
     <tbody>
     <?php foreach ($transactions as $r): ?>
-    <?php $isOverdue = $r['status'] === 'Overdue'; ?>
+    <?php $isOverdue = $r['status'] === 'Overdue' || ($r['status'] === 'Borrowed' && $r['due_date'] < date('Y-m-d')); ?>
     <tr>
         <td class="text-muted"><?= $r['borrow_id'] ?></td>
         <td><?= htmlspecialchars($r['borrower_no'] . ' — ' . $r['full_name']) ?></td>

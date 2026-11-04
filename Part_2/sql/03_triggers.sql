@@ -86,3 +86,39 @@ $$;
 CREATE OR REPLACE TRIGGER trg_borrow_items_audit
 AFTER INSERT OR UPDATE OR DELETE ON borrow_items
 FOR EACH ROW EXECUTE FUNCTION fn_borrow_items_audit();
+
+
+-- ── BEFORE trigger: auto switch from Borrowed to Overdue when due_date < CURRENT_DATE ──
+CREATE OR REPLACE FUNCTION fn_auto_check_overdue()
+RETURNS TRIGGER
+LANGUAGE plpgsql AS $$
+BEGIN
+    IF NEW.status = 'Borrowed' AND NEW.due_date < CURRENT_DATE THEN
+        NEW.status := 'Overdue';
+    ELSIF NEW.status = 'Overdue' AND NEW.due_date >= CURRENT_DATE THEN
+        NEW.status := 'Borrowed';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_auto_check_overdue ON borrow_transactions;
+CREATE TRIGGER trg_auto_check_overdue
+BEFORE INSERT OR UPDATE ON borrow_transactions
+FOR EACH ROW EXECUTE FUNCTION fn_auto_check_overdue();
+
+-- Helper function to sync existing transactions whose due date has passed
+CREATE OR REPLACE FUNCTION fn_sync_overdue_transactions()
+RETURNS INTEGER
+LANGUAGE plpgsql AS $$
+DECLARE
+    v_count INTEGER;
+BEGIN
+    UPDATE borrow_transactions
+       SET status = 'Overdue'
+     WHERE status = 'Borrowed'
+       AND due_date < CURRENT_DATE;
+    GET DIAGNOSTICS v_count = ROW_COUNT;
+    RETURN v_count;
+END;
+$$;
